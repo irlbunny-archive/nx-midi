@@ -53,6 +53,12 @@ static void AudioCallback(void* data, Uint8 *stream, int len)
 int main(int argc, char *argv[])
 {
     consoleInit(NULL);
+
+    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+
+    PadState Pad;
+    padInitializeDefault(&Pad);
+
     printf("nx-midi by Cyuubi\n");
 
     tml_message* TinyMidiLoader = NULL;
@@ -65,49 +71,40 @@ int main(int argc, char *argv[])
     OutputAudioSpec.callback = AudioCallback;
 
     if (SDL_AudioInit(TSF_NULL) < 0)
-    {
-        printf("Could not initialize audio hardware or driver\n");
-    }
+        printf("Could not initialize audio hardware or driver.\n");
 
     TinyMidiLoader = tml_load_filename("sdmc:/default.mid");
     if (!TinyMidiLoader)
-    {
-        printf("Could not load MIDI file\n");
-    }
+        printf("Could not load MIDI file.\n");
 
     g_MidiMessage = TinyMidiLoader;
 
     g_TinySoundFont = tsf_load_filename("sdmc:/default.sf2");
     if (!g_TinySoundFont)
-    {
-        printf("Could not load SoundFont\n");
-    }
+        printf("Could not load SoundFont.\n");
 
     tsf_channel_set_bank_preset(g_TinySoundFont, 9, 128, 0);
+    tsf_set_max_voices(g_TinySoundFont, 416);
     tsf_set_output(g_TinySoundFont, TSF_STEREO_INTERLEAVED, OutputAudioSpec.freq, 0.0f);
 
     if (SDL_OpenAudio(&OutputAudioSpec, TSF_NULL) < 0)
-    {
-        printf("Could not open the audio hardware or the desired audio output format\n");
-    }
+        printf("Could not open the audio hardware or the desired audio output format.\n");
 
     SDL_PauseAudio(0);
 
     while (appletMainLoop())
     {
-        hidScanInput();
+        padUpdate(&Pad);
 
-        u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
-        if (kDown & KEY_MINUS)
+        u64 kDown = padGetButtonsDown(&Pad);
+        if (kDown & HidNpadButton_Plus)
             break;
-
-        if (g_MidiMessage != NULL)
-            SDL_Delay(100);
 
         consoleUpdate(NULL);
     }
 
     SDL_Quit();
+    
     consoleExit(NULL);
     return 0;
 }
